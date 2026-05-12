@@ -347,8 +347,7 @@ function showSt(type,msg){
 function downloadTemplate(){
   var h=FIELDS.map(function(f){return f.key;}).join(",");
   var ex=FIELDS.map(function(f){return '"'+f.example+'"';}).join(",");
-  var csv="﻿"+h+"
-"+ex;
+  var csv="﻿"+h+"\n"+ex;
   var a=document.createElement("a");
   a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8;"}));
   a.download="research_template.csv";a.click();
