@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>แดชบอร์ดโครงการวิจัย — คณะวิทยาศาสตร์ ศรีราชา</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f5f6fa;--surface:#fff;--surface2:#f0f1f6;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);--text:#1a1c23;--text2:#5a5d6e;--text3:#9598a8;--blue:#2563eb;--blue-bg:#eff6ff;--blue-text:#1d4ed8;--green:#16a34a;--green-bg:#f0fdf4;--green-text:#15803d;--amber:#d97706;--amber-bg:#fffbeb;--amber-text:#b45309;--red:#dc2626;--red-bg:#fef2f2;--red-text:#b91c1c;--purple:#7c3aed;--purple-bg:#f5f3ff;--purple-text:#6d28d9;--radius:10px;--radius-sm:6px;--shadow:0 1px 3px rgba(0,0,0,0.06);--shadow-md:0 4px 16px rgba(0,0,0,0.10)}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#222533;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);--text:#e8eaf0;--text2:#9699ab;--text3:#5c5f70;--blue-bg:#1e3a8a22;--blue-text:#93c5fd;--green-bg:#14532d22;--green-text:#86efac;--amber-bg:#78350f22;--amber-text:#fcd34d;--red-bg:#7f1d1d22;--red-text:#fca5a5;--purple-bg:#4c1d9522;--purple-text:#c4b5fd}}
+body{font-family:'Noto Sans Thai','Sarabun','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;gap:1rem;height:64px;position:sticky;top:0;z-index:200;box-shadow:var(--shadow)}
+.topbar-logo{width:36px;height:36px;border-radius:var(--radius-sm);background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;flex-shrink:0}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tag-ku{background:var(--blue-bg);color:var(--blue-text);border:1px solid rgba(37,99,235,0.15);border-radius:999px;font-size:11px;font-weight:600;padding:3px 10px}
+.btn-import{display:flex;align-items:center;gap:6px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius-sm);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-import:hover{background:#1d4ed8}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border-radius:14px;box-shadow:var(--shadow-md);width:min(560px,95vw);max-height:90vh;overflow-y:auto;transform:translateY(16px);transition:transform 0.2s}
+.overlay.open .modal{transform:translateY(0)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:1px solid var(--border)}
+.modal-header h2{font-size:15px;font-weight:700}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px;padding:2px 6px;border-radius:4px}
+.modal-close:hover{background:var(--surface2)}
+.modal-body{padding:1.5rem}
+.drop-zone{border:2px dashed var(--border2);border-radius:var(--radius);padding:2.5rem 1.5rem;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;position:relative}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--blue);background:var(--blue-bg)}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.fmt-tag{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;font-size:11px;font-weight:600;padding:2px 8px;color:var(--text2)}
+.drop-formats{display:flex;justify-content:center;gap:8px;margin-top:12px}
+.map-section{margin-top:1.25rem}
+.map-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.map-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.map-label{font-size:12px;color:var(--text2);padding:6px 0;display:flex;align-items:center}
+.map-select{font-size:12px;padding:5px 24px 5px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239598a8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center;width:100%}
+.preview-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-sm);max-height:200px;overflow-y:auto}
+.preview-table{width:100%;border-collapse:collapse;font-size:11px}
+.preview-table th{padding:6px 10px;background:var(--surface2);color:var(--text3);text-align:left;font-weight:600;text-transform:uppercase;position:sticky;top:0;white-space:nowrap}
+.preview-table td{padding:5px 10px;border-top:1px solid var(--border);color:var(--text);white-space:nowrap}
+.status-bar{margin-top:1rem;padding:10px 14px;border-radius:var(--radius-sm);font-size:12px;display:none;align-items:center;gap:6px}
+.status-bar.info{background:var(--blue-bg);color:var(--blue-text);border:1px solid rgba(37,99,235,0.2);display:flex}
+.status-bar.success{background:var(--green-bg);color:var(--green-text);border:1px solid rgba(22,163,74,0.2);display:flex}
+.status-bar.error{background:var(--red-bg);color:var(--red-text);border:1px solid rgba(220,38,38,0.2);display:flex}
+.modal-footer{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-top:1px solid var(--border);gap:10px;flex-wrap:wrap}
+.btn-cancel{background:none;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 16px;font-size:13px;cursor:pointer;color:var(--text2);font-family:inherit}
+.btn-apply{background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-apply:disabled{opacity:0.45;cursor:not-allowed}
+.btn-template{background:none;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;cursor:pointer;color:var(--blue-text);font-family:inherit}
+.btn-template:hover{background:var(--blue-bg)}
+.file-info{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);margin-top:12px;font-size:13px}
+.file-remove{margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px}
+.data-badge{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:999px;font-size:11px;color:var(--text2);padding:2px 10px}
+.data-dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.data-dot.imported{background:var(--blue)}
+.container{max-width:1280px;margin:0 auto;padding:2rem}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:1.5rem}
+@media(max-width:900px){.metrics{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.metrics{grid-template-columns:1fr}}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden}
+.metric-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--radius) var(--radius) 0 0}
+.metric-card:nth-child(1)::before{background:var(--blue)}
+.metric-card:nth-child(2)::before{background:var(--green)}
+.metric-card:nth-child(3)::before{background:var(--amber)}
+.metric-card:nth-child(4)::before{background:var(--purple)}
+.metric-icon{width:32px;height:32px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:4px}
+.metric-card:nth-child(1) .metric-icon{background:var(--blue-bg);color:var(--blue-text)}
+.metric-card:nth-child(2) .metric-icon{background:var(--green-bg);color:var(--green-text)}
+.metric-card:nth-child(3) .metric-icon{background:var(--amber-bg);color:var(--amber-text)}
+.metric-card:nth-child(4) .metric-icon{background:var(--purple-bg);color:var(--purple-text)}
+.metric-label{font-size:12px;color:var(--text2);font-weight:500}
+.metric-value{font-size:28px;font-weight:700;letter-spacing:-0.5px}
+.metric-sub{font-size:11px;color:var(--text3)}
+.filter-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem;box-shadow:var(--shadow)}
+.filter-bar label{font-size:13px;color:var(--text2);font-weight:500;white-space:nowrap}
+.filter-bar select{font-size:13px;padding:6px 28px 6px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239598a8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;min-width:130px}
+.filter-clear{font-size:12px;color:var(--blue-text);cursor:pointer;background:none;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:5px 12px;font-family:inherit}
+.filter-count{font-size:12px;color:var(--text3)}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:1.5rem}
+@media(max-width:800px){.charts-grid{grid-template-columns:1fr}}
+.full-width{grid-column:1/-1}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;box-shadow:var(--shadow)}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.chart-title{font-size:13px;font-weight:600;color:var(--text2)}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--text2)}
+.legend-item{display:flex;align-items:center;gap:4px}
+.legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.table-wrapper{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--surface2)}
+.badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+.badge-closed{background:var(--green-bg);color:var(--green-text);border-color:rgba(22,163,74,0.15)}
+.badge-waiting{background:var(--amber-bg);color:var(--amber-text);border-color:rgba(217,119,6,0.15)}
+.badge-active{background:var(--blue-bg);color:var(--blue-text);border-color:rgba(37,99,235,0.15)}
+.badge-extend{background:var(--purple-bg);color:var(--purple-text);border-color:rgba(124,58,237,0.15)}
+.badge-cancel{background:var(--red-bg);color:var(--red-text);border-color:rgba(220,38,38,0.15)}
+.budget-bar-wrap{display:flex;align-items:center;gap:6px}
+.budget-bar-bg{flex:1;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;min-width:50px}
+.budget-bar-fill{height:100%;border-radius:3px}
+.section-head{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.section-head h2{font-size:14px;font-weight:600}
+.section-count{background:var(--surface2);border:1px solid var(--border);border-radius:999px;font-size:11px;color:var(--text2);padding:1px 8px}
+.empty{text-align:center;padding:3rem;color:var(--text3);font-size:14px}
+footer{text-align:center;font-size:12px;color:var(--text3);padding:2rem;border-top:1px solid var(--border);margin-top:2rem}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">วจ</div>
+  <div>
+    <div style="font-size:15px;font-weight:600">แดชบอร์ดโครงการวิจัย</div>
+    <div style="font-size:12px;color:var(--text3)">คณะวิทยาศาสตร์ ศรีราชา</div>
+  </div>
+  <div class="topbar-right">
+    <span class="data-badge"><span class="data-dot" id="data-dot"></span><span id="data-source-label">ข้อมูลเริ่มต้น</span></span>
+    <span class="tag-ku">มหาวิทยาลัยเกษตรศาสตร์ วิทยาเขตศรีราชา</span>
+    <button class="btn-import" onclick="openModal()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      นำเข้าข้อมูล
+    </button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <h2>📂 นำเข้าข้อมูลโครงการวิจัย</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" id="file-input" accept=".csv,.xlsx,.xls" onchange="handleFile(this.files[0])">
+        <div style="font-size:36px;margin-bottom:8px">📄</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">ลากไฟล์มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</div>
+        <div style="font-size:12px;color:var(--text3)">รองรับไฟล์ CSV และ Excel</div>
+        <div class="drop-formats"><span class="fmt-tag">.CSV</span><span class="fmt-tag">.XLSX</span><span class="fmt-tag">.XLS</span></div>
+      </div>
+      <div class="file-info" id="file-info" style="display:none">
+        <span style="font-size:20px">📊</span>
+        <div>
+          <div style="font-weight:600" id="file-name"></div>
+          <div style="font-size:11px;color:var(--text3)" id="file-meta"></div>
+        </div>
+        <button class="file-remove" onclick="clearFile()">✕</button>
+      </div>
+      <div class="status-bar" id="status-bar"></div>
+      <div class="map-section" id="map-section" style="display:none">
+        <div class="map-title">🔗 จับคู่คอลัมน์</div>
+        <div class="map-grid" id="map-grid"></div>
+      </div>
+      <div id="preview-section" style="display:none;margin-top:1.25rem">
+        <div class="map-title">👁️ ตัวอย่างข้อมูล (5 แถวแรก)</div>
+        <div class="preview-wrap" id="preview-wrap"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-template" onclick="downloadTemplate()">⬇ Template CSV</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
+        <button class="btn-apply" id="btn-apply" disabled onclick="applyImport()">✓ นำเข้าข้อมูล</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="metrics">
+    <div class="metric-card"><div class="metric-icon">📁</div><div class="metric-label">โครงการทั้งหมด</div><div class="metric-value" id="m-total">—</div><div class="metric-sub">โครงการวิจัย</div></div>
+    <div class="metric-card"><div class="metric-icon">💰</div><div class="metric-label">งบประมาณที่ได้รับรวม</div><div class="metric-value" id="m-budget">—</div><div class="metric-sub">บาท</div></div>
+    <div class="metric-card"><div class="metric-icon">📊</div><div class="metric-label">อัตราการใช้งบประมาณ</div><div class="metric-value" id="m-rate">—</div><div class="metric-sub">ของงบที่ได้รับทั้งหมด</div></div>
+    <div class="metric-card"><div class="metric-icon">✅</div><div class="metric-label">ปิดโครงการแล้ว</div><div class="metric-value" id="m-closed">—</div><div class="metric-sub" id="m-closed-sub">โครงการ</div></div>
+  </div>
+  <div class="filter-bar">
+    <label>ปีงบประมาณ</label><select id="f-year"><option value="all">ทั้งหมด</option></select>
+    <label>ภาควิชา</label><select id="f-dept"><option value="all">ทั้งหมด</option></select>
+    <label>สถานะโครงการ</label><select id="f-status"><option value="all">ทั้งหมด</option></select>
+    <label>ประเภททุน</label><select id="f-grant"><option value="all">ทั้งหมด</option></select>
+    <span class="filter-count" id="filter-count"></span>
+    <button class="filter-clear" onclick="clearFilters()">รีเซ็ตตัวกรอง</button>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-header"><span class="chart-title">งบประมาณตามปีงบประมาณ</span><div class="legend"><span class="legend-item"><span class="legend-dot" style="background:#2563eb"></span>งบที่ได้รับ</span><span class="legend-item"><span class="legend-dot" style="background:#16a34a"></span>งบที่ใช้</span></div></div><div style="position:relative;height:220px"><canvas id="chart-year"></canvas></div></div>
+    <div class="chart-card"><div class="chart-header"><span class="chart-title">สถานะโครงการ</span><div class="legend" id="status-legend"></div></div><div style="position:relative;height:220px"><canvas id="chart-status"></canvas></div></div>
+    <div class="chart-card"><div class="chart-header"><span class="chart-title">งบประมาณตามภาควิชา</span><div class="legend"><span class="legend-item"><span class="legend-dot" style="background:#7c3aed"></span>งบที่ได้รับ</span><span class="legend-item"><span class="legend-dot" style="background:#c4b5fd"></span>งบที่ใช้</span></div></div><div style="position:relative;height:220px"><canvas id="chart-dept"></canvas></div></div>
+    <div class="chart-card"><div class="chart-header"><span class="chart-title">จำนวนโครงการตามประเภททุน</span></div><div style="position:relative;height:220px"><canvas id="chart-grant"></canvas></div></div>
+    <div class="chart-card full-width">
+      <div class="section-head"><h2>รายการโครงการวิจัย</h2><span class="section-count" id="table-count">0 รายการ</span></div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th style="width:64px">ปี พ.ศ.</th><th style="width:150px">หัวหน้าโครงการ</th><th style="width:110px">ภาควิชา</th><th>ชื่อโครงการ</th><th style="width:110px;text-align:right">งบที่ได้รับ (บาท)</th><th style="width:100px">อัตราการใช้</th><th style="width:130px">สถานะโครงการ</th></tr></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+        <div class="empty" id="empty-state" style="display:none">ไม่พบข้อมูลที่ตรงกับตัวกรอง</div>
+      </div>
+    </div>
+  </div>
+</div>
+<footer>คณะวิทยาศาสตร์ ศรีราชา มหาวิทยาลัยเกษตรศาสตร์ วิทยาเขตศรีราชา &nbsp;·&nbsp; ข้อมูลปีงบประมาณ 2562–2569</footer>
+<script>
+
+var DEFAULT_DATA = [
+  {year:2562,pi:"ผศ.ดร.วิศวัฒน์ สกุลศักดิ์นิมิตร",dept:"วิทยาศาสตร์พื้นฐานและพลศึกษา",grantType:"สมทบ สวพ.มก.",project:"การศึกษาประสิทธิภาพของ SBA-15 ที่มี ZnO สำหรับไกลโคไลซิส PET",budgetTotal:60000,budgetUsed:60000,projectStatus:"ปิดโครงการ"},
+  {year:2562,pi:"อ.ดร.อานิษา ราศี",dept:"วิทยาศาสตร์พื้นฐานและพลศึกษา",grantType:"สมทบ สวพ.มก.",project:"กราฟเคย์เลย์ระบุทิศทางเชิงพีชคณิตเหนือริงเฉพาะที่จำกัด",budgetTotal:50000,budgetUsed:30000,projectStatus:"รอตีพิมพ์"},
+  {year:2562,pi:"ผศ.ดร.นภัสวรรณ์ ชำนาญเวช",dept:"วิทยาศาสตร์พื้นฐานและพลศึกษา",grantType:"สมทบ สวพ.มก.",project:"การสังเคราะห์สารอนุพันธ์ 4-ไทเอโซลิดิโนน",budgetTotal:70000,budgetUsed:42000,projectStatus:"รอตีพิมพ์"},
+  {year:2562,pi:"ผศ.ดร.ยงยุทธิ์ มั่นจิต",dept:"วิทยาศาสตร์พื้นฐานและพลศึกษา",grantType:"พัฒนานักวิจัย",project:"การศึกษาการกระจายตัวของความเค้น-ความเครียดในพีเอ็มเอ็มเอ โดยโฟโตอิลาสติก",budgetTotal:80000,budgetUsed:80000,projectStatus:"ปิดโครงการ"},
+  {year:2562,pi:"ผศ.ดร.วรสิทธิ ศรีบุญ",dept:"วิทยาศาสตร์พื้นฐานและพลศึกษา",grantType:"พัฒนานักวิจัย",project:"การประเมินพลังงานไฟฟ้าในอาคารคณะวิทยาศาสตร์ ศรีราชา",budgetTotal:80000,budgetUsed:80000,projectStatus:"ปิดโครงการ"},
+  {year:2562,pi:"ผศ.ดร.จันทร์เพ็ญ ตั้งจิตรเจริญกุล",dept:"ทรัพยากรและสิ่งแวดล้อม",grantType:"สมทบเพื่อความเป็นเลิศ",project:"ประสิทธิภาพของเอนโดไฟท์แอคติโนมัยสีทในทุเรียน",budgetTotal:100000,budgetUsed:90000,projectStatus:"ปิดโครงการ"},
+  {year:2562,pi:"ผศ.ดร.ภัทรวดี สุ่มทอง นาคมี",dept:"ทรัพยากรและสิ่งแวดล้อม",grantType:"สมทบเพื่อความเป็นเลิศ",project:"สารสกัดจากเปลือกไม้สำหรับแมงกะพรุนดอง",budgetTotal:100000,budgetUsed:90000,projectStatus:"ปิดโครงการ"},
+  {year:2563,pi:"ผศ.ดร.อรวรรณ วัชนุภาพร",dept:"คอมพิวเตอร์และสารสนเทศ",grantType:"พัฒนานักวิจัย",project:"การสร้างอักษรศิลป์ด้วยการเรียนรู้เชิงลึก",budgetTotal:80000,budgetUsed:80000,projectStatus:"ปิดโครงการ"},
+  {year:2563,pi:"รศ.ดร.ทองใส จำนงการ",dept:"วิทยาศาสตร์พื้นฐานและพลศึกษา",grantType:"สมทบเพื่อความเป็นเลิศ",project:"พอลิเมอร์ชีวภาพคอมโพสิตสำหรับพิมพ์สามมิติทางการแพทย์",budgetTotal:100000,budgetUsed:100000,projectStatus:"ปิดโครงการ"},
+  {year:2564,pi:"ผศ.ดร.ฉัตรชัย เกษมทวีโชค",dept:"คอมพิวเตอร์และสารสนเทศ",grantType:"พัฒนานักวิจัย",project:"อัลกอริทึมลดขนาดข้อมูลขนาดใหญ่ด้วย PCA",budgetTotal:80000,budgetUsed:64000,projectStatus:"ปิดโครงการ"},
+  {year:2564,pi:"ดร.จรรยา เจตน์เจริญ",dept:"ทรัพยากรและสิ่งแวดล้อม",grantType:"สมทบเพื่อความเป็นเลิศ",project:"พฤติกรรมของแมวป่าหัวแบนในกรงเลี้ยง",budgetTotal:100000,budgetUsed:50000,projectStatus:"ยุติโครงการวิจัย"},
+  {year:2565,pi:"ผศ.ดร.ยงยุทธิ์ มั่นจิต",dept:"วิทยาศาสตร์พื้นฐานและพลศึกษา",grantType:"สมทบ สวพ.มก.",project:"สมบัติเชิงกลในพีเอ็มเอ็มเอด้วยระบบกลศาสตร์เชิงแสง",budgetTotal:75000,budgetUsed:75000,projectStatus:"ปิดโครงการ"},
+  {year:2565,pi:"ผศ.ดร.กัลยาวัสถ์ วังคะวงษ์",dept:"วิทยาศาสตร์พื้นฐานและพลศึกษา",grantType:"สมทบ สวพ.มก.",project:"ตัวเร่งปฏิกิริยาทางแสงบิสมัทออกซีเฮไลด์",budgetTotal:75000,budgetUsed:75000,projectStatus:"ปิดโครงการ"},
+  {year:2565,pi:"อ.ดร.ทัดดาว คำปุก",dept:"ทรัพยากรและสิ่งแวดล้อม",grantType:"สมทบ สวพ.มก.",project:"ฤทธิ์ต้านอนุมูลอิสระของสารสกัดฟ้าทะลายโจร",budgetTotal:75000,budgetUsed:45000,projectStatus:"รอตีพิมพ์"},
+  {year:2565,pi:"ผศ.ดร.ภ. พึ่งบุญ ปานศิลา",dept:"วิทยาศาสตร์พื้นฐานและพลศึกษา",grantType:"ทุนพัฒนานักวิจัย",project:"ฟิล์มบาง Ga2O3 บน Si(100) ด้วย PE-ALD สำหรับสารกึ่งตัวนำกำลังสูง",budgetTotal:300000,budgetUsed:180000,projectStatus:"ขยายครั้งที่ 4"},
+  {year:2565,pi:"รศ.ดร.ธณิศร์ ตั้งเจริญ",dept:"วิทยาศาสตร์พื้นฐานและพลศึกษา",grantType:"ทุนพัฒนานักวิจัย",project:"ตัวเร่งปฏิกิริยาเชิงแสง ZnFe2O4/ZnO บำบัดน้ำเสียอุตสาหกรรม",budgetTotal:300000,budgetUsed:120000,projectStatus:"ขยายครั้งที่ 5"},
+  {year:2566,pi:"ผศ.ดร.ชัชวาล ช่างทำ",dept:"วิทยาศาสตร์พื้นฐานและพลศึกษา",grantType:"สมทบ สวพ.มก.",project:"เซลล์เชื้อเพลิงผลิตไฟฟ้าจากก๊าซไฮโดรเจน",budgetTotal:75000,budgetUsed:75000,projectStatus:"ปิดโครงการ"},
+  {year:2567,pi:"ผศ.ดร.จิรวรรณ เจริญสุข",dept:"คอมพิวเตอร์และสารสนเทศ",grantType:"สมทบ สวพ.มก.",project:"ระบบแนะนำการเรียนรู้ส่วนบุคคลด้วย AI",budgetTotal:80000,budgetUsed:80000,projectStatus:"ปิดโครงการ"},
+  {year:2567,pi:"ผศ.ดร.ฉัตรชัย เกษมทวีโชค",dept:"คอมพิวเตอร์และสารสนเทศ",grantType:"เครือข่ายนานาชาติ",project:"Intelligent Systems for Agricultural IoT",budgetTotal:500000,budgetUsed:300000,projectStatus:"ขยายครั้งที่ 1"},
+  {year:2568,pi:"ผศ.ดร.ชัชวาล ช่างทำ",dept:"วิทยาศาสตร์พื้นฐานและพลศึกษา",grantType:"กลุ่มวิจัย",project:"กลุ่มวิจัยพลังงานทดแทนและเทคโนโลยีสะอาดเพื่อชุมชน",budgetTotal:500000,budgetUsed:400000,projectStatus:"อยู่ระหว่างดำเนินการ"},
+  {year:2568,pi:"รศ.ดร.ทองใส จำนงการ",dept:"วิทยาศาสตร์พื้นฐานและพลศึกษา",grantType:"กลุ่มวิจัย",project:"กลุ่มวิจัยวัสดุชีวภาพและวัสดุอัจฉริยะ",budgetTotal:500000,budgetUsed:300000,projectStatus:"อยู่ระหว่างดำเนินการ"},
+  {year:2569,pi:"ผศ.ดร.ฉัตรชัย เกษมทวีโชค",dept:"คอมพิวเตอร์และสารสนเทศ",grantType:"เครือข่ายนานาชาติ",project:"Deep Learning for Remote Sensing Data",budgetTotal:500000,budgetUsed:250000,projectStatus:"ขยายครั้งที่ 4"},
+  {year:2569,pi:"ผศ.ดร.ภ. พึ่งบุญ ปานศิลา",dept:"วิทยาศาสตร์พื้นฐานและพลศึกษา",grantType:"ทุนพัฒนานักวิจัย",project:"beta-Ga2O3 Transistors สำหรับอิเล็กทรอนิกส์กำลังสูง",budgetTotal:400000,budgetUsed:250000,projectStatus:"ยุติโครงการวิจัย"}
+];
+
+var FIELDS = [
+  {key:"year",label:"ปีงบประมาณ (year)",example:"2566"},
+  {key:"pi",label:"หัวหน้าโครงการ (pi)",example:"ผศ.ดร.ชื่อ นามสกุล"},
+  {key:"dept",label:"ภาควิชา (dept)",example:"คอมพิวเตอร์และสารสนเทศ"},
+  {key:"grantType",label:"ประเภททุน (grantType)",example:"สมทบ สวพ.มก."},
+  {key:"project",label:"ชื่อโครงการ (project)",example:"การวิจัย..."},
+  {key:"budgetTotal",label:"งบที่ได้รับ (budgetTotal)",example:"80000"},
+  {key:"budgetUsed",label:"งบที่ใช้ (budgetUsed)",example:"60000"},
+  {key:"projectStatus",label:"สถานะโครงการ (projectStatus)",example:"ปิดโครงการ"}
+];
+
+var DSHORT = {"วิทยาศาสตร์พื้นฐานและพลศึกษา":"วิทย์พื้นฐานฯ","ทรัพยากรและสิ่งแวดล้อม":"ทรัพยากรฯ","คอมพิวเตอร์และสารสนเทศ":"คอมพิวเตอร์ฯ","สำนักงานเลขานุการ":"สำนักงานฯ"};
+var DATA = DEFAULT_DATA.slice();
+var pRows=[],pCols=[],mapping={},curFile=null;
+var cY,cS,cD,cG;
+
+function openModal(){document.getElementById("overlay").classList.add("open");clearFile();}
+function closeModal(){document.getElementById("overlay").classList.remove("open");}
+function handleOverlayClick(e){if(e.target===document.getElementById("overlay"))closeModal();}
+
+var dz=document.getElementById("drop-zone");
+dz.addEventListener("dragover",function(e){e.preventDefault();dz.classList.add("drag-over");});
+dz.addEventListener("dragleave",function(){dz.classList.remove("drag-over");});
+dz.addEventListener("drop",function(e){e.preventDefault();dz.classList.remove("drag-over");if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+
+function handleFile(f){
+  if(!f)return;
+  curFile=f;
+  var ext=f.name.split(".").pop().toLowerCase();
+  document.getElementById("file-info").style.display="flex";
+  document.getElementById("file-name").textContent=f.name;
+  document.getElementById("file-meta").textContent=ext.toUpperCase()+" · "+(f.size>1048576?(f.size/1048576).toFixed(1)+" MB":Math.round(f.size/1024)+" KB");
+  showSt("info","กำลังอ่านไฟล์...");
+  if(ext==="csv"){
+    Papa.parse(f,{header:true,skipEmptyLines:true,encoding:"UTF-8",complete:function(r){pCols=r.meta.fields;pRows=r.data;onParsed();},error:function(){showSt("error","อ่านไฟล์ CSV ไม่ได้");}});
+  } else if(ext==="xlsx"||ext==="xls"){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      try{
+        var wb=XLSX.read(e.target.result,{type:"binary"});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        var json=XLSX.utils.sheet_to_json(ws,{defval:""});
+        if(!json.length){showSt("error","ไม่พบข้อมูลในไฟล์");return;}
+        pCols=Object.keys(json[0]);pRows=json;onParsed();
+      }catch(err){showSt("error","อ่านไฟล์ Excel ไม่ได้");}
+    };
+    reader.readAsBinaryString(f);
+  } else {
+    showSt("error","รองรับเฉพาะ .csv .xlsx .xls");
+  }
+}
+
+function onParsed(){
+  showSt("success","อ่านไฟล์สำเร็จ — "+pRows.length+" แถว, "+pCols.length+" คอลัมน์");
+  buildMap();buildPreview();
+  document.getElementById("btn-apply").disabled=false;
+}
+
+function buildMap(){
+  var grid=document.getElementById("map-grid");
+  document.getElementById("map-section").style.display="block";
+  mapping={};
+  grid.innerHTML=FIELDS.map(function(f){
+    var auto=pCols.find(function(c){return c.toLowerCase()===f.key.toLowerCase()||c===f.label;});
+    var opts=pCols.map(function(c){return '<option value="'+c+'"'+(c===auto?' selected':'')+'>'+c+'</option>';}).join('');
+    opts+='<option value=""'+(!auto?' selected':'')+'>— ไม่เลือก —</option>';
+    return '<div class="map-label">'+f.label+'</div><select class="map-select" data-key="'+f.key+'" onchange="chMap(this)">'+opts+'</select>';
+  }).join('');
+  grid.querySelectorAll("select").forEach(function(s){if(s.value)mapping[s.dataset.key]=s.value;});
+}
+
+function chMap(sel){if(sel.value)mapping[sel.dataset.key]=sel.value;else delete mapping[sel.dataset.key];buildPreview();}
+
+function buildPreview(){
+  document.getElementById("preview-section").style.display="block";
+  var wrap=document.getElementById("preview-wrap");
+  var keys=Object.keys(mapping).filter(function(k){return mapping[k];});
+  if(!keys.length){wrap.innerHTML='<div style="padding:1rem;text-align:center;color:var(--text3)">กรุณาจับคู่คอลัมน์</div>';return;}
+  var rows=pRows.slice(0,5);
+  wrap.innerHTML='<table class="preview-table"><thead><tr>'+keys.map(function(k){var f=FIELDS.find(function(x){return x.key===k;});return '<th>'+(f?f.label:k)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(r){return '<tr>'+keys.map(function(k){return '<td>'+(r[mapping[k]]||'')+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>';
+}
+
+function applyImport(){
+  var conv=pRows.map(function(r){
+    var o={};
+    FIELDS.forEach(function(f){if(mapping[f.key])o[f.key]=r[mapping[f.key]]||'';});
+    o.year=parseInt(o.year)||0;
+    o.budgetTotal=parseFloat(String(o.budgetTotal).replace(/,/g,''))||0;
+    o.budgetUsed=parseFloat(String(o.budgetUsed).replace(/,/g,''))||0;
+    return o;
+  }).filter(function(r){return r.year&&r.project;});
+  if(!conv.length){showSt("error","ไม่พบข้อมูลที่ถูกต้อง");return;}
+  DATA=conv;
+  document.getElementById("data-dot").className="data-dot imported";
+  document.getElementById("data-source-label").textContent="นำเข้าจาก: "+(curFile?curFile.name:"ไฟล์")+" ("+conv.length+" โครงการ)";
+  closeModal();rebuildFilters();update();
+}
+
+function clearFile(){
+  curFile=null;pRows=[];pCols=[];mapping={};
+  document.getElementById("file-info").style.display="none";
+  document.getElementById("map-section").style.display="none";
+  document.getElementById("preview-section").style.display="none";
+  document.getElementById("status-bar").style.display="none";
+  document.getElementById("btn-apply").disabled=true;
+  document.getElementById("file-input").value="";
+}
+
+function showSt(type,msg){
+  var el=document.getElementById("status-bar");
+  el.className="status-bar "+type;el.textContent=msg;el.style.display="flex";
+}
+
+function downloadTemplate(){
+  var h=FIELDS.map(function(f){return f.key;}).join(",");
+  var ex=FIELDS.map(function(f){return '"'+f.example+'"';}).join(",");
+  var csv="﻿"+h+"
+"+ex;
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8;"}));
+  a.download="research_template.csv";a.click();
+}
+
+var fY=document.getElementById("f-year"),fD=document.getElementById("f-dept"),fS=document.getElementById("f-status"),fG=document.getElementById("f-grant");
+
+function rebuildFilters(){
+  function pop(sel,vals){
+    var cur=sel.value;
+    sel.innerHTML='<option value="all">ทั้งหมด</option>';
+    Array.from(new Set(vals)).sort().forEach(function(v){var o=document.createElement("option");o.value=v;o.textContent=v;sel.appendChild(o);});
+    if(Array.from(sel.options).some(function(o){return o.value===cur;}))sel.value=cur;
+  }
+  pop(fY,DATA.map(function(d){return d.year;}));
+  pop(fD,DATA.map(function(d){return d.dept;}));
+  pop(fS,DATA.map(function(d){return d.projectStatus;}));
+  pop(fG,DATA.map(function(d){return d.grantType;}));
+}
+
+function clearFilters(){fY.value="all";fD.value="all";fS.value="all";fG.value="all";update();}
+
+function getFiltered(){
+  return DATA.filter(function(d){
+    if(fY.value!=="all"&&d.year!==+fY.value)return false;
+    if(fD.value!=="all"&&d.dept!==fD.value)return false;
+    if(fS.value!=="all"&&d.projectStatus!==fS.value)return false;
+    if(fG.value!=="all"&&d.grantType!==fG.value)return false;
+    return true;
+  });
+}
+
+function fmt(n){return(+n||0).toLocaleString("th-TH");}
+function fmtM(n){return n>=1000000?(n/1000000).toFixed(2)+" ล้าน":(n/1000).toFixed(0)+" พัน";}
+
+function scol(s){
+  if(s==="ปิดโครงการ")return"#16a34a";
+  if(s==="รอตีพิมพ์")return"#d97706";
+  if(s==="อยู่ระหว่างดำเนินการ")return"#2563eb";
+  if(s==="ยุติโครงการวิจัย")return"#dc2626";
+  if(s&&s.indexOf("ขยาย")>=0)return"#7c3aed";
+  return"#9598a8";
+}
+function bcls(s){
+  if(s==="ปิดโครงการ")return"badge-closed";
+  if(s==="รอตีพิมพ์")return"badge-waiting";
+  if(s==="อยู่ระหว่างดำเนินการ")return"badge-active";
+  if(s==="ยุติโครงการวิจัย")return"badge-cancel";
+  if(s&&s.indexOf("ขยาย")>=0)return"badge-extend";
+  return"badge-waiting";
+}
+
+function update(){
+  var data=getFiltered();
+  var tB=data.reduce(function(s,d){return s+(+d.budgetTotal||0);},0);
+  var tU=data.reduce(function(s,d){return s+(+d.budgetUsed||0);},0);
+  var cl=data.filter(function(d){return d.projectStatus==="ปิดโครงการ";}).length;
+  var rt=tB>0?tU/tB*100:0;
+
+  document.getElementById("m-total").textContent=data.length;
+  document.getElementById("m-budget").textContent=fmtM(tB);
+  document.getElementById("m-rate").textContent=rt.toFixed(1)+"%";
+  document.getElementById("m-closed").textContent=cl;
+  document.getElementById("m-closed-sub").textContent="จาก "+data.length+" โครงการ";
+  document.getElementById("filter-count").textContent=data.length<DATA.length?"แสดง "+data.length+" จาก "+DATA.length:"";
+  document.getElementById("table-count").textContent=data.length+" รายการ";
+
+  var yrs=Array.from(new Set(data.map(function(d){return d.year;}))).sort();
+  var yT=yrs.map(function(y){return data.filter(function(d){return d.year===y;}).reduce(function(s,d){return s+(+d.budgetTotal||0);},0);});
+  var yU=yrs.map(function(y){return data.filter(function(d){return d.year===y;}).reduce(function(s,d){return s+(+d.budgetUsed||0);},0);});
+  if(cY)cY.destroy();
+  cY=new Chart(document.getElementById("chart-year"),{type:"bar",data:{labels:yrs.map(String),datasets:[{label:"งบที่ได้รับ",data:yT,backgroundColor:"#2563eb",borderRadius:4,borderSkipped:false},{label:"งบที่ใช้",data:yU,backgroundColor:"#16a34a",borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:function(v){return v>=1000000?(v/1000000).toFixed(1)+"M":v>=1000?(v/1000).toFixed(0)+"K":v;},font:{size:11}},grid:{color:"rgba(128,128,128,0.1)"}},x:{ticks:{font:{size:11}},grid:{display:false}}}}});
+
+  var sc={};data.forEach(function(d){sc[d.projectStatus]=(sc[d.projectStatus]||0)+1;});
+  var sk=Object.keys(sc).sort(function(a,b){return sc[b]-sc[a];});
+  document.getElementById("status-legend").innerHTML=sk.map(function(k){return '<span class="legend-item"><span class="legend-dot" style="background:'+scol(k)+'"></span>'+k+" ("+sc[k]+")</span>";}).join("");
+  if(cS)cS.destroy();
+  cS=new Chart(document.getElementById("chart-status"),{type:"doughnut",data:{labels:sk,datasets:[{data:sk.map(function(k){return sc[k];}),backgroundColor:sk.map(scol),borderWidth:2,borderColor:"transparent"}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:"60%"}});
+
+  var depts=Array.from(new Set(data.map(function(d){return d.dept;})));
+  var dT=depts.map(function(k){return data.filter(function(d){return d.dept===k;}).reduce(function(s,d){return s+(+d.budgetTotal||0);},0);});
+  var dU=depts.map(function(k){return data.filter(function(d){return d.dept===k;}).reduce(function(s,d){return s+(+d.budgetUsed||0);},0);});
+  if(cD)cD.destroy();
+  cD=new Chart(document.getElementById("chart-dept"),{type:"bar",data:{labels:depts.map(function(k){return DSHORT[k]||k;}),datasets:[{label:"งบที่ได้รับ",data:dT,backgroundColor:"#7c3aed",borderRadius:4,borderSkipped:false},{label:"งบที่ใช้",data:dU,backgroundColor:"#c4b5fd",borderRadius:4,borderSkipped:false}]},options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{callback:function(v){return v>=1000000?(v/1000000).toFixed(1)+"M":v>=1000?(v/1000).toFixed(0)+"K":v;},font:{size:11}},grid:{color:"rgba(128,128,128,0.1)"}},y:{ticks:{font:{size:11}},grid:{display:false}}}}});
+
+  var gc={};data.forEach(function(d){gc[d.grantType]=(gc[d.grantType]||0)+1;});
+  var gk=Object.keys(gc).sort(function(a,b){return gc[b]-gc[a];});
+  var gcols=["#2563eb","#16a34a","#d97706","#7c3aed","#0d9488","#dc2626","#f59e0b","#6366f1","#84cc16"];
+  if(cG)cG.destroy();
+  cG=new Chart(document.getElementById("chart-grant"),{type:"bar",data:{labels:gk,datasets:[{label:"จำนวนโครงการ",data:gk.map(function(k){return gc[k];}),backgroundColor:gcols.slice(0,gk.length),borderRadius:4,borderSkipped:false}]},options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11},stepSize:1},grid:{color:"rgba(128,128,128,0.1)"}},y:{ticks:{font:{size:11}},grid:{display:false}}}}});
+
+  var tbody=document.getElementById("table-body"),empty=document.getElementById("empty-state");
+  if(!data.length){tbody.innerHTML="";empty.style.display="block";return;}
+  empty.style.display="none";
+  tbody.innerHTML=data.map(function(d){
+    var bt=+d.budgetTotal||0,bu=+d.budgetUsed||0;
+    var pct=bt>0?Math.round(bu/bt*100):0;
+    var col=pct>=100?"#16a34a":pct>=60?"#2563eb":"#d97706";
+    var proj=String(d.project||"");
+    return "<tr><td style='font-weight:600;color:var(--text2)'>"+d.year+"</td><td style='font-size:12px'>"+d.pi+"</td><td style='font-size:12px;color:var(--text2)'>"+(DSHORT[d.dept]||d.dept||"")+"</td><td style='font-size:12px'>"+(proj.length>90?proj.slice(0,90)+"…":proj)+"</td><td style='text-align:right;font-variant-numeric:tabular-nums'>"+fmt(bt)+"</td><td><div class='budget-bar-wrap'><div class='budget-bar-bg'><div class='budget-bar-fill' style='width:"+pct+"%;background:"+col+"'></div></div><span style='font-size:11px;color:var(--text2);min-width:30px'>"+pct+"%</span></div></td><td><span class='badge "+bcls(d.projectStatus)+"'>"+d.projectStatus+"</span></td></tr>";
+  }).join("");
+}
+
+[fY,fD,fS,fG].forEach(function(el){el.addEventListener("change",update);});
+rebuildFilters();
+update();
+</script>
+</body>
+</html>
